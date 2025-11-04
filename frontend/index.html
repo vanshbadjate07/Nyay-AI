@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NyayAI - Your AI Legal Assistant for Indian Law</title>
+  <meta name="description" content="NyayAI is an AI-powered legal assistant for Indian law. Get legal document summaries, guidance, and draft generation in 10+ Indian languages." />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-section">
+          <div class="logo-icon">⚖️</div>
+          <h2 class="logo-text">NyayAI</h2>
+        </div>
+        <button class="new-chat-btn" id="newChatBtn" title="Start new conversation">
+          <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </button>
+      </div>
+      
+      <div class="sidebar-content">
+        <div class="info-section">
+          <h3>✨ Features</h3>
+          <ul>
+            <li>📄 Document Analysis</li>
+            <li>💬 Legal Q&A</li>
+            <li>📝 Draft Generation</li>
+            <li>🎙️ Text-to-Speech</li>
+            <li>🌐 10+ Languages</li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="sidebar-footer">
+        <p class="footer-text">AI Legal Assistant for Indian Law</p>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Header -->
+      <header class="header">
+        <div class="model-selector">
+          <span class="model-name">⚖️ NyayAI Legal Assistant</span>
+        </div>
+        <div class="language-selector">
+          <label for="language">Language:</label>
+          <select id="language">
+            <option value="English">English</option>
+            <option value="Hindi">हिन्दी (Hindi)</option>
+            <option value="Marathi">मराठी (Marathi)</option>
+            <option value="Tamil">தமிழ் (Tamil)</option>
+            <option value="Telugu">తెలుగు (Telugu)</option>
+            <option value="Bengali">বাংলা (Bengali)</option>
+            <option value="Gujarati">ગુજરાતી (Gujarati)</option>
+            <option value="Kannada">ಕನ್ನಡ (Kannada)</option>
+            <option value="Malayalam">മലയാളം (Malayalam)</option>
+            <option value="Punjabi">ਪੰਜਾਬੀ (Punjabi)</option>
+          </select>
+        </div>
+      </header>
+
+      <!-- Chat Area -->
+      <div class="chat-area">
+        <div class="chat-messages" id="chat">
+          <!-- Welcome screen will be added by JavaScript -->
+        </div>
+      </div>
+
+      <!-- Input Area -->
+      <div class="input-area">
+        <div class="input-container">
+          <div class="input-wrapper">
+            <button class="input-icon-btn upload-btn" id="uploadBtn" title="Upload document">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+              </svg>
+            </button>
+            <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.docx" style="display: none;" />
+            
+            <textarea 
+              id="userInput" 
+              placeholder="Ask a legal question or upload a document..."
+              rows="1"
+            ></textarea>
+            
+            <button class="send-btn" id="sendBtn" disabled>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
+          <div class="disclaimer">
+            <p>NyayAI can make mistakes. Please verify important legal information with a qualified lawyer.</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/static/script.js"></script>
+</body>
+</html>
