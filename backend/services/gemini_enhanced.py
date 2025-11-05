@@ -172,10 +172,16 @@ class GeminiClient:
 
     def summarize_legal(self, text: str, language: Optional[str] = None) -> str:
         """Generate comprehensive legal summary with optimized prompt."""
-        lang_instruction = f"\n**LANGUAGE: Respond ONLY in {language}. Translate all content to {language}.**\n" if language and language != "English" else ""
+        lang_instruction = ""
+        if language and language != "English":
+            lang_instruction = f"""
+**CRITICAL INSTRUCTION - MUST FOLLOW:**
+You MUST respond ENTIRELY in {language} language. Every single word, heading, and explanation must be in {language}.
+Do NOT use English. Translate everything to {language}.
+This is MANDATORY.
+"""
         
         prompt = f"""You are "Nyay-AI," an AI Legal Assistant specialized in understanding Indian legal documents and explaining them in plain, natural language.
-
 {lang_instruction}
 ### **Your Task:**
 Carefully read and summarize the following legal document, covering all key elements below:
@@ -223,11 +229,16 @@ Carefully read and summarize the following legal document, covering all key elem
 
     def generate_legal_draft(self, issue_text: str, language: Optional[str] = None) -> str:
         """Generate legal draft with optimized prompt."""
-        lang_instruction = f"\n**LANGUAGE: Write the entire draft in {language}. All sections must be in {language}.**\n" if language and language != "English" else ""
+        lang_instruction = ""
+        if language and language != "English":
+            lang_instruction = f"""
+**CRITICAL INSTRUCTION - MUST FOLLOW:**
+You MUST write the ENTIRE draft in {language} language. Every word, every section, every heading must be in {language}.
+Do NOT use English. This is MANDATORY.
+"""
         
         prompt = f"""You are "Nyay-AI Draft Writer," an experienced Indian legal expert with over 20 years of practice.
 Your role is to draft accurate, professional, and submission-ready legal documents for Indian users.
-
 {lang_instruction}
 ---
 
