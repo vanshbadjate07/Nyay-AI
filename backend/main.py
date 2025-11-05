@@ -251,3 +251,37 @@ async def export_pdf(req: ExportPdfRequest):
     with open(path, "wb") as f:
         f.write(pdf_bytes.getvalue())
     return FileResponse(path, filename=filename, media_type="application/pdf")
+
+
+class TTSRequest(BaseModel):
+    text: str
+    lang: str
+
+
+@app.post("/api/tts")
+async def text_to_speech(req: TTSRequest):
+    """Proxy for Google Translate TTS to avoid CORS issues."""
+    import requests
+    from urllib.parse import quote
+    import base64
+    
+    try:
+        encoded_text = quote(req.text[:200])  # Limit to 200 chars
+        tts_url = f"https://translate.google.com/translate_tts?ie=UTF-8&tl={req.lang}&client=tw-ob&q={encoded_text}"
+        
+        response = requests.get(tts_url, headers={
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }, timeout=10)
+        
+        if response.status_code == 200:
+            # Return base64 encoded audio
+            audio_base64 = base64.b64encode(response.content).decode('utf-8')
+            return JSONResponse({
+                "success": True,
+                "audio": f"data:audio/mpeg;base64,{audio_base64}"
+            })
+        else:
+            raise HTTPException(status_code=500, detail="TTS service unavailable")
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"TTS error: {str(e)}")
