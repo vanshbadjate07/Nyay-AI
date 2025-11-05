@@ -1,3 +1,4 @@
+// Automatically detect API base URL (works for both local and production)
 const API_BASE = window.location.origin;
 
 const chatEl = document.getElementById("chat");
@@ -499,11 +500,13 @@ fileInput.addEventListener("change", async (e) => {
     const extracted = js.text || "";
     const detectedLang = js.detected_language || null;
     
-    // Auto-set language if detected
-    if (detectedLang && detectedLang !== languageSelect.value) {
-      updateProgress(progress, `🌐 Detected language: ${detectedLang}`);
-      languageSelect.value = detectedLang;
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    // Use user-selected language (don't auto-change)
+    const language = languageSelect.value;
+    
+    // Show detected language for info only
+    if (detectedLang && detectedLang !== language) {
+      updateProgress(progress, `🌐 Document language: ${detectedLang} | Output language: ${language}`);
+      await new Promise(resolve => setTimeout(resolve, 1500));
     }
     
     // Verify legal document
@@ -518,7 +521,6 @@ fileInput.addEventListener("change", async (e) => {
 
     // Summarize
     updateProgress(progress, '📝 Generating comprehensive summary...');
-    const language = languageSelect.value;
     const sum = await callApi('/api/summarize', { text: extracted, language });
     const summary = sum.summary || '(no summary)';
 
@@ -560,6 +562,7 @@ function speak(text, language) {
     .replace(/\n/g, ' ')  // Single newlines to space
     .replace(/\s{2,}/g, ' ')  // Multiple spaces to single
     .replace(/Disclaimer:.*$/i, '')  // Remove disclaimer
+    .replace(/Note:.*$/i, '')  // Remove notes
     .trim();
   
   if (!cleanText) {
@@ -567,11 +570,17 @@ function speak(text, language) {
     return;
   }
   
-  // Get available voices
-  const voices = synth.getVoices();
   const langCode = langToBCP47(language);
   const langPrefix = langCode.split('-')[0];
   
+  // For Hindi and other Indian languages, use Google Translate TTS (better support)
+  if (langPrefix !== 'en') {
+    speakWithGoogleTTS(cleanText, langCode, language);
+    return;
+  }
+  
+  // For English, use browser TTS
+  const voices = synth.getVoices();
   console.log('Available voices:', voices.length);
   console.log('Looking for language:', langCode, langPrefix);
   
@@ -681,24 +690,156 @@ function splitTextIntoChunks(text, maxLength) {
   return chunks.length > 0 ? chunks : [text];
 }
 
+// Global variable to track current audio
+let currentAudio = null;
+let isPlayingTTS = false;
+
 function stopSpeak() {
+  // Stop browser TTS
   window.speechSynthesis.cancel();
+  
+  // Stop Google TTS audio if playing
+  isPlayingTTS = false;
+  
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.currentTime = 0;
+    currentAudio = null;
+  }
+  
+  // Clean up any remaining audio elements
+  const audioElements = document.querySelectorAll('audio.tts-audio');
+  audioElements.forEach(audio => {
+    audio.pause();
+    audio.remove();
+  });
+  
+  console.log('🛑 TTS stopped');
+}
+
+// Google Translate TTS for Hindi and Indian languages (via backend proxy)
+async function speakWithGoogleTTS(text, langCode, language) {
+  // Remove existing audio
+  stopSpeak();
+  
+  // Set playing flag
+  isPlayingTTS = true;
+  
+  console.log(`🔊 Starting TTS for ${language}...`);
+  
+  // Limit text length (Google TTS has limits)
+  const maxLength = 200;
+  const chunks = [];
+  
+  // Split into sentences
+  const sentences = text.match(/[^।.!?]+[।.!?]+/g) || [text];
+  let currentChunk = '';
+  
+  for (const sentence of sentences) {
+    if ((currentChunk + sentence).length > maxLength) {
+      if (currentChunk) chunks.push(currentChunk.trim());
+      currentChunk = sentence;
+    } else {
+      currentChunk += ' ' + sentence;
+    }
+  }
+  if (currentChunk) chunks.push(currentChunk.trim());
+  
+  // Play chunks sequentially
+  let currentIndex = 0;
+  
+  async function playNextChunk() {
+    // Check if stopped
+    if (!isPlayingTTS) {
+      console.log('🛑 TTS playback stopped by user');
+      return;
+    }
+    
+    if (currentIndex >= chunks.length) {
+      console.log('✅ TTS completed');
+      isPlayingTTS = false;
+      currentAudio = null;
+      return;
+    }
+    
+    const chunk = chunks[currentIndex];
+    
+    try {
+      // Call backend TTS proxy
+      const response = await fetch(`${API_BASE}/api/tts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: chunk, lang: langCode })
+      });
+      
+      if (!response.ok) {
+        throw new Error('TTS service error');
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && data.audio) {
+        // Check if stopped while fetching
+        if (!isPlayingTTS) {
+          return;
+        }
+        
+        const audio = new Audio(data.audio);
+        audio.className = 'tts-audio';
+        currentAudio = audio;  // Track current audio
+        
+        audio.onended = () => {
+          if (!isPlayingTTS) return;
+          currentIndex++;
+          playNextChunk();
+        };
+        
+        audio.onerror = (e) => {
+          console.error('❌ Audio playback error:', e);
+          if (!isPlayingTTS) return;
+          currentIndex++;
+          playNextChunk();
+        };
+        
+        await audio.play();
+      } else {
+        throw new Error('Invalid TTS response');
+      }
+      
+    } catch (err) {
+      console.error(`❌ TTS error for chunk ${currentIndex}:`, err);
+      
+      // Show error only once
+      if (currentIndex === 0) {
+        addAssistantMessage(`⚠️ Text-to-speech is not available for ${language} right now.\n\n**This might be because:**\n• Network connection issues\n• Browser audio restrictions\n• TTS service temporarily unavailable\n\n**Try:**\n• Refresh the page\n• Use a different browser (Chrome recommended)\n• Check your internet connection`);
+      }
+      
+      // Try next chunk
+      currentIndex++;
+      if (currentIndex < chunks.length && isPlayingTTS) {
+        playNextChunk();
+      }
+    }
+  }
+  
+  console.log(`🔊 Playing ${chunks.length} chunks in ${language}`);
+  playNextChunk();
 }
 
 function langToBCP47(lang) {
   const map = {
-    English: 'en-US',      // US English for better voice quality
-    Hindi: 'hi-IN',
-    Marathi: 'mr-IN',
-    Tamil: 'ta-IN',
-    Telugu: 'te-IN',
-    Bengali: 'bn-IN',
-    Gujarati: 'gu-IN',
-    Kannada: 'kn-IN',
-    Malayalam: 'ml-IN',
-    Punjabi: 'pa-IN',
+    English: 'en',
+    Hindi: 'hi',
+    Marathi: 'mr',
+    Tamil: 'ta',
+    Telugu: 'te',
+    Bengali: 'bn',
+    Gujarati: 'gu',
+    Kannada: 'kn',
+    Malayalam: 'ml',
+    Punjabi: 'pa',
   };
-  return map[lang] || 'en-US';
+  return map[lang] || 'en';
 }
 
 async function askDraft(context, language) {
